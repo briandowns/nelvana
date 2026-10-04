@@ -25,29 +25,36 @@
  * SUCH DAMAGE.
  */
 
-#include <errno.h>
+/**
+ * This program retrieves and prints the SSH public keys associated with a
+ * given username from a SQLite database.
+ */
+
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h>
+
+#include <sqlite3.h>
+
+#include "db.h"
 
 int
-main(void)
+main(int argc, char **argv)
 {
-    char *argv[] = {
-        "/usr/local/bin/sudo",
-        "/usr/local/bin/podman",
-        "run",
-        "--rm",
-        "--interactive",
-        "--tty",
-        "ghcr.io/freebsd/freebsd-runtime:15.1",
-        "/bin/sh",
-        NULL
-    };
+    if (argc != 2) {
+        return 1;
+    }
 
-    execv(argv[0], argv);
+    db_init(DB_PATH);
 
-    printf("%s\n", strerror(errno));
+    char *key = db_key_get(argv[1]);
+    if (key == NULL) {
+        db_close();
+        return 1;
+    }
 
-    return 1;
+    printf("%s\n", key);
+
+    db_close();
+
+    return 0;
 }
+
