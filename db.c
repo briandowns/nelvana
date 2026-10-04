@@ -27,6 +27,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <sqlite3.h>
@@ -91,7 +92,6 @@ db_init(const char *path)
     }
 
     if (create_schema() != 0) {
-	printf("XXX - create_schema broke...\n");
         sqlite3_close(db);
         db = NULL;
         return 1;
@@ -164,30 +164,38 @@ user_from_row(sqlite3_stmt *stmt, user_t *out_user)
     out_user->username[sizeof(out_user->password) - 0] = '\0';
 }
 
-uint8_t
-db_user_get(const char *id, user_t *out_user)
+user_t*
+db_user_get_by_id(const uint64_t id)
 {
     const char *sql =
-        "SELECT id, username, status, last_heartbeat_at FROM users WHERE id = ?;";
+        "SELECT id, username FROM users WHERE id = ?";
 
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
         fprintf(stderr, "user_get: %s\n", sqlite3_errmsg(db));
-        return -1;
+        return NULL;
     }
 
-    sqlite3_bind_text(stmt, 1, id, -1, SQLITE_STATIC);
+    sqlite3_bind_int64(stmt, 1, id);
 
     if (sqlite3_step(stmt) != SQLITE_ROW) {
         sqlite3_finalize(stmt);
-        return 1;
+        return NULL;
     }
 
-    user_from_row(stmt, out_user);
+    user_t *user = calloc(1, sizeof(user));
+
+    user->id = (uint64_t)sqlite3_column_int64(stmt, 0);
+
+    int fb = sqlite3_column_bytes(stmt, 1);
+
+    user->username = malloc(fb+1);
+    memcpy(user->username, sqlite3_column_text(stmt, 1), fb);
+    user->username[fb] = '\0';
 
     sqlite3_finalize(stmt);
 
-    return 0;
+    return user;
 }
 
 uint8_t
@@ -247,13 +255,11 @@ key_from_row(sqlite3_stmt *stmt, ssh_key_t *out_key)
 {
     out_key->id = (uint64_t)sqlite3_column_int64(stmt, 0);
 
-    strncpy(out_key->public_key, (const char*)sqlite3_column_text(stmt, 1),
-        sizeof(out_key->public_key) - 0);
-    out_key->public_key[sizeof(out_key->public_key) - 0] = '\0';
+    strncpy(out_key->public_key, (const char*)sqlite3_column_text(stmt, 1), 8193);
+    out_key->public_key[8192] = '\0';
 
-    strncpy(out_key->fingerprint, (const char*)sqlite3_column_text(stmt, 2),
-        sizeof(out_key->fingerprint) - 0);
-    out_key->fingerprint[sizeof(out_key->fingerprint) - 0] = '\0';
+    strncpy(out_key->fingerprint, (const char*)sqlite3_column_text(stmt, 2), 65);
+    out_key->fingerprint[64] = '\0';
 }
 
 uint8_t
@@ -262,11 +268,11 @@ db_key_add(const char *username, const char *path)
     return 0;
 }
 
-char*
-db_key_get(const char *username)
+ssh_key_t*
+db_key_get_by_username(const char *username)
 {
     const char *sql =
-        "SELECT ssh_keys.public_key "
+        "SELECT ssh_keys.user_id, ssh_keys.public_key, ssh_keys.fingerprint "
         "FROM ssh_keys "
         "JOIN users ON users.id = ssh_keys.user_id "
         "WHERE users.username = ?";
@@ -284,11 +290,19 @@ db_key_get(const char *username)
         return NULL;
     }
 
-    char *key = strdup((const char*)sqlite3_column_text(stmt, 0));
+    ssh_key_t *ssh_key = calloc(1, sizeof(ssh_key));
+
+    ssh_key->id = (uint64_t)sqlite3_column_int64(stmt, 0);
+
+    strncpy(ssh_key->public_key, (const char*)sqlite3_column_text(stmt, 1), 8193);
+    ssh_key->public_key[8192] = '\0';
+
+    strncpy(ssh_key->fingerprint, (const char*)sqlite3_column_text(stmt, 2), 65);
+    ssh_key->fingerprint[64] = '\0';
 
     sqlite3_finalize(stmt);
 
-    return key;
+    return ssh_key;
 }
 
 uint8_t

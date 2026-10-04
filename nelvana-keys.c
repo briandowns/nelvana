@@ -30,7 +30,9 @@
  * given username from a SQLite database.
  */
 
+#include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <sqlite3.h>
 
@@ -48,15 +50,15 @@ main(int argc, char **argv)
 	return 1;
     }
 
-    char *key = db_key_get(argv[1]);
+    ssh_key_t *key = db_key_get_by_username(argv[1]);
     if (key == NULL) {
-	fprintf(stderr, "XXX - error!\n");
         db_close();
         return 1;
     }
 
-    printf("%s\n", key);
+    printf("environment=\"NELVANA_USER_ID=%" PRIu64 "\" %s\n", key->id, key->public_key);
 
+    free(key);
     db_close();
 
     return 0;
