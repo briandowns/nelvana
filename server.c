@@ -30,87 +30,6 @@ signal_handler(int sig)
     }
 }
 
-void
-dashboard_handler(papago_request_t *req, papago_response_t *res, void *user_data)
-{
-    PAPAGO_UNUSED(req);
-
-    papago_t *server = (papago_t*)user_data;
-
-    char buffer[40000];
-    papago_render_file(server, "public/templates/dashboard.html", buffer, sizeof(buffer), NULL);
-    papago_res_html(res, buffer);
-}
-
-void
-registser_handler(papago_request_t *req, papago_response_t *res, void *user_data)
-{
-    PAPAGO_UNUSED(req);
-
-    papago_t *server = (papago_t*)user_data;
-
-    char buffer[40000];
-    papago_render_file(server, "public/templates/register.html", buffer, sizeof(buffer), NULL);
-    papago_res_html(res, buffer);
-}
-
-void
-login_handler(papago_request_t *req, papago_response_t *res, void *user_data)
-{
-    PAPAGO_UNUSED(req);
-
-    papago_t *server = (papago_t*)user_data;
-
-    char buffer[40000];
-    papago_render_file(server, "public/templates/login.html", buffer, sizeof(buffer), NULL);
-    papago_res_html(res, buffer);
-}
-
-void
-landing_handler(papago_request_t *req, papago_response_t *res, void *user_data)
-{
-    PAPAGO_UNUSED(req);
-
-    papago_t *server = (papago_t*)user_data;
-
-    char buffer[40000];
-    papago_render_file(server, "public/templates/landing.html", buffer, sizeof(buffer), NULL);
-    papago_res_html(res, buffer);
-}
-
-
-void
-user_handler(papago_request_t *req, papago_response_t *res, void *user_data)
-{
-    PAPAGO_UNUSED(user_data);
-
-    const char *username;
-    char json[256];
-
-    username = papago_req_param(req, "username");
-
-    snprintf(json, sizeof(json), "{\"username\":\"%s\",\"id\":123}",
-        (username != NULL) ? username : "unknown");
-
-    papago_res_json(res, json);
-}
-
-void
-users_handler(papago_request_t *req, papago_response_t *res, void *user_data)
-{
-    PAPAGO_UNUSED(user_data);
-
-    const char *username;
-    char json[256];
-
-    username = papago_req_param(req, "username");
-
-    snprintf(json, sizeof(json), "{\"username\":\"%s\",\"id\":123}",
-        (username != NULL) ? username : "unknown");
-
-    papago_res_json(res, json);
-}
-
 static bool
 logger_before(papago_request_t *req, papago_response_t *res, void *user_data)
 {
@@ -156,7 +75,7 @@ main(void)
 
     s_log(S_LOG_INFO, "msg", "starting nelvana server");
 
-    //db_init(DB_PATH);
+    db_init(DB_PATH);
 
     server = papago_new();
     if (server == NULL) {

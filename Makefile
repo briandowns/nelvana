@@ -27,10 +27,12 @@ PREFIX = /usr/local
 MACOS_MANPAGE_LOC = /usr/share/man
 LINUX_MANPAGE_LOC = /usr/share/man/man1
 
-$(BINDIR)/$(BINARY): $(BINDIR) clean
+.PHONY: server
+server: $(BINDIR) clean
 	$(CC) $(CFLAGS) server.c db.c -o $(BINDIR)/$(BINARY) $(LDFLAGS)
 
-$(BINDIR)/$(BINARYCTL): $(BINDIR) clean
+.PHONY: ctl
+ctl: $(BINDIR) clean
 	$(CC) $(CFLAGS) nelvanactl.c -o $(BINDIR)/$(BINARYCTL) $(LDFLAGS)
 	
 $(BINDIR):

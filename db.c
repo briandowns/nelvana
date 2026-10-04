@@ -43,7 +43,7 @@ static const char *SCHEMA_SQL =
     "    email TEXT,"
     "    first_name TEXT,"
     "    last_name TEXT,"
-    "    password TEXT,"
+    "    password TEXT"
     ");"
 
     "CREATE TABLE IF NOT EXISTS ssh_keys ("
@@ -91,6 +91,7 @@ db_init(const char *path)
     }
 
     if (create_schema() != 0) {
+	printf("XXX - create_schema broke...\n");
         sqlite3_close(db);
         db = NULL;
         return 1;

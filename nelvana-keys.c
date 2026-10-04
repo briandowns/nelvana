@@ -43,10 +43,14 @@ main(int argc, char **argv)
         return 1;
     }
 
-    db_init(DB_PATH);
+    if (db_init(DB_PATH) != 0) {
+	fprintf(stderr, "error initializing database\n");
+	return 1;
+    }
 
     char *key = db_key_get(argv[1]);
     if (key == NULL) {
+	fprintf(stderr, "XXX - error!\n");
         db_close();
         return 1;
     }
