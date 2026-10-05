@@ -1,0 +1,40 @@
+{{ include "_header.html" }}
+<section class="auth-wrap">
+  <div class="terminal-chrome">
+    <div class="chrome-bar">
+      <span class="c-dot red"></span><span class="c-dot amber"></span><span class="c-dot green"></span>
+      <span class="chrome-title">register@nelvana:~</span>
+    </div>
+    <div class="chrome-body">
+      <h1>Create your account</h1>
+      <p class="sub">Provision access to the nelvana gateway.</p>
+
+      {{ safe error_html }}
+
+      <form method="POST" action="/register" class="form">
+        <div class="grid-2">
+          <div class="field">
+            <label for="first_name">First name</label>
+            <input id="first_name" name="first_name" value="{{ first_name }}" required>
+          </div>
+          <div class="field">
+            <label for="last_name">Last name</label>
+            <input id="last_name" name="last_name" value="{{ last_name }}" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" name="email" value="{{ email }}" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" name="password" minlength="8" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Create account</button>
+      </form>
+      <p class="hint">Already have access? <a href="/login">Sign in</a></p>
+      <p class="hint dim">demo: ops@nelvana.dev / nelvana-demo</p>
+    </div>
+  </div>
+</section>
+{{ include "_footer.html" }}

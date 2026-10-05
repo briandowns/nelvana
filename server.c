@@ -1,13 +1,14 @@
+#define _POSIX_C_SOURCE 199309L
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <papago.h>
 
 #include "db.h"
-#include "logger.h"
+#include <logger.h>
 
 #define API_BASE "/api/v1"
 #define API_USER API_BASE "/user"
@@ -28,6 +29,55 @@ signal_handler(int sig)
         papago_stop(server);
     }
 }
+
+void
+dashboard_handler(papago_request_t *req, papago_response_t *res, void *user_data)
+{
+    PAPAGO_UNUSED(req);
+
+    papago_t *server = (papago_t*)user_data;
+
+    char buffer[40000];
+    papago_render_file(server, "public/templates/dashboard.html", buffer, sizeof(buffer), NULL);
+    papago_res_html(res, buffer);
+}
+
+void
+registser_handler(papago_request_t *req, papago_response_t *res, void *user_data)
+{
+    PAPAGO_UNUSED(req);
+
+    papago_t *server = (papago_t*)user_data;
+
+    char buffer[40000];
+    papago_render_file(server, "public/templates/register.html", buffer, sizeof(buffer), NULL);
+    papago_res_html(res, buffer);
+}
+
+void
+login_handler(papago_request_t *req, papago_response_t *res, void *user_data)
+{
+    PAPAGO_UNUSED(req);
+
+    papago_t *server = (papago_t*)user_data;
+
+    char buffer[40000];
+    papago_render_file(server, "public/templates/login.html", buffer, sizeof(buffer), NULL);
+    papago_res_html(res, buffer);
+}
+
+void
+landing_handler(papago_request_t *req, papago_response_t *res, void *user_data)
+{
+    PAPAGO_UNUSED(req);
+
+    papago_t *server = (papago_t*)user_data;
+
+    char buffer[40000];
+    papago_render_file(server, "public/templates/landing.html", buffer, sizeof(buffer), NULL);
+    papago_res_html(res, buffer);
+}
+
 
 void
 user_handler(papago_request_t *req, papago_response_t *res, void *user_data)
@@ -61,6 +111,41 @@ users_handler(papago_request_t *req, papago_response_t *res, void *user_data)
     papago_res_json(res, json);
 }
 
+static bool
+logger_before(papago_request_t *req, papago_response_t *res, void *user_data)
+{
+    PAPAGO_UNUSED(req);
+    PAPAGO_UNUSED(res);
+    PAPAGO_UNUSED(user_data);
+
+    return true;
+}
+
+static void
+logger_after(papago_request_t *req, papago_response_t *res, void *user_data)
+{
+    PAPAGO_UNUSED(user_data);
+
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    double duration_ms = (now.tv_sec  - papago_req_start_time(req).tv_sec) 
+        * 1000.0
+        + (now.tv_nsec - papago_req_start_time(req).tv_nsec) / 1.0e6;
+
+    fprintf(stdout,
+        "{\"remote\":\"%s\",\"method\":\"%s\",\"path\":\"%s\","
+        "\"version\":\"%s\",\"host\":\"%s\",\"user_agent\":\"%s\","
+        "\"status\":%d,\"duration_ms\":%.3f}\n",
+        papago_req_client_ip(req) != NULL ? papago_req_client_ip(req) : "-",
+        papago_req_method(req) != NULL ? papago_req_method(req) : "-",
+        papago_req_path(req) != NULL ? papago_req_path(req) : "-",
+        papago_req_version(req) != NULL ? papago_req_version(req) : "-",
+        papago_req_host(req) != NULL ? papago_req_host(req) : "-",
+        papago_req_user_agent(req) != NULL ? papago_req_user_agent(req) : "-",
+        papago_res_status(res),
+        duration_ms);
+}
+
 int
 main(void)
 {
@@ -71,7 +156,7 @@ main(void)
 
     s_log(S_LOG_INFO, "msg", "starting nelvana server");
 
-    db_init(DB_PATH);
+    //db_init(DB_PATH);
 
     server = papago_new();
     if (server == NULL) {
@@ -79,12 +164,21 @@ main(void)
         return 1;
     }
 
-    papago_route(server, PAPAGO_GET, "/", papago_serve_static_handler, server);
+    papago_middleware_t structured_logger = {
+        .before    = logger_before,
+        .after     = logger_after,
+        .user_data = NULL,
+    };
+    papago_middleware_add(server, &structured_logger);
+
+    papago_route(server, PAPAGO_GET, "/", dashboard_handler, server);
+    papago_route(server, PAPAGO_GET, "/static", papago_serve_static_handler, server);
     papago_route(server, PAPAGO_GET, API_USER "/:id", user_handler, NULL);
     papago_route(server, PAPAGO_GET, API_USERS, users_handler, NULL);
 
     papago_config_t config = papago_default_config();
-    config.static_dir = "./public";
+    config.static_dir = "./public/static";
+    config.enable_template_rendering = true;
 
     if (papago_start(server, &config) != 0) {
         fprintf(stderr, "%s\n", papago_error());

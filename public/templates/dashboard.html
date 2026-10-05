@@ -1,0 +1,78 @@
+{{ include "_header.html" }}
+<section class="dashboard">
+  <div class="dash-head">
+    <div>
+      <h1>SSH session dashboard</h1>
+      <p class="sub">Live view of every configured SSH target, its podman
+        image, and the container currently serving it.</p>
+    </div>
+    <div class="dash-actions">
+      <a class="btn btn-ghost btn-sm" href="/dashboard">Refresh</a>
+    </div>
+  </div>
+
+  {{ safe error_html }}
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <p class="stat-label">Active sessions</p>
+      <p class="stat-value accent">{{ active_count }}</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">Total configured</p>
+      <p class="stat-value">{{ total_count }}</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">Images in use</p>
+      <p class="stat-value">{{ image_count }}</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">Registered users</p>
+      <p class="stat-value">{{ user_count }}</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="sessions-table">
+      <thead>
+        <tr>
+          <th>SSH target</th>
+          <th>Image</th>
+          <th>Container</th>
+          <th>User</th>
+          <th>Status</th>
+          <th>Running time</th>
+          <th class="right">Action</th>
+        </tr>
+      </thead>
+      <tbody><!--NELVANA_ROWS--></tbody>
+    </table>
+  </div>
+
+  <details class="new-session"{{ safe details_open }}>
+    <summary>+ Configure a new SSH &rarr; container route</summary>
+    <form method="POST" action="/sessions" class="form new-session-form">
+      <div class="grid-2">
+        <div class="field">
+          <label for="ssh_ip">SSH target IP</label>
+          <input id="ssh_ip" name="ssh_ip" placeholder="10.20.0.30" value="{{ form_ssh_ip }}" required>
+        </div>
+        <div class="field">
+          <label for="image">Podman image</label>
+          <select id="image" name="image">
+            <option value="docker.io/library/ubuntu:22.04">docker.io/library/ubuntu:22.04</option>
+            <option value="docker.io/library/alpine:3.20">docker.io/library/alpine:3.20</option>
+            <option value="docker.io/library/debian:bookworm">docker.io/library/debian:bookworm</option>
+            <option value="ghcr.io/nelvana/devbox:latest">ghcr.io/nelvana/devbox:latest</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="user_id">Assign to user</label>
+        <select id="user_id" name="user_id"><!--NELVANA_USER_OPTIONS--></select>
+      </div>
+      <button type="submit" class="btn btn-primary">Launch container</button>
+    </form>
+  </details>
+</section>
+{{ include "_footer.html" }}

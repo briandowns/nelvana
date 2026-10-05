@@ -1,0 +1,30 @@
+{{ include "_header.html" }}
+<section class="auth-wrap">
+  <div class="terminal-chrome">
+    <div class="chrome-bar">
+      <span class="c-dot red"></span><span class="c-dot amber"></span><span class="c-dot green"></span>
+      <span class="chrome-title">login@nelvana:~</span>
+    </div>
+    <div class="chrome-body">
+      <h1>Sign in</h1>
+      <p class="sub">Authenticate to reach the session dashboard.</p>
+
+      {{ safe error_html }}
+
+      <form method="POST" action="/login" class="form">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" name="email" value="{{ email }}" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" name="password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+      </form>
+      <p class="hint">Need an account? <a href="/register">Register</a></p>
+      <p class="hint dim">demo: ops@nelvana.dev / nelvana-demo</p>
+    </div>
+  </div>
+</section>
+{{ include "_footer.html" }}

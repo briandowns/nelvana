@@ -1,0 +1,46 @@
+{{ include "_header.html" }}
+<section class="hero">
+  <p class="eyebrow"><span class="live-dot"></span> gateway online</p>
+  <h1 class="wordmark">nel<span class="accent">vana</span></h1>
+  <p class="lede">
+    SSH into a single address. Land inside a freshly routed podman
+    container, every time. Manage accounts and watch every session live
+    from one dashboard.
+  </p>
+
+  <div class="terminal-chrome boot-demo">
+    <div class="chrome-bar">
+      <span class="c-dot red"></span><span class="c-dot amber"></span><span class="c-dot green"></span>
+      <span class="chrome-title">session@nelvana:~</span>
+    </div>
+    <div class="chrome-body mono">
+      <p class="accent">$ ssh deploy@10.20.0.11</p>
+      <p class="dim">resolving route via nelvana-gateway...</p>
+      <p class="dim">image: ghcr.io/nelvana/devbox:latest</p>
+      <p class="dim">provisioning podman container... done</p>
+      <p class="dim">redirecting tty -&gt; container/7f3a2c</p>
+      <p class="accent">welcome to nelvana.</p>
+    </div>
+  </div>
+
+  <div class="cta-row">
+    <a class="btn btn-primary" href="/register">Create account</a>
+    <a class="btn btn-ghost" href="/login">Sign in</a>
+  </div>
+
+  <div class="feature-grid">
+    <div class="feature">
+      <h3>Per-user routing</h3>
+      <p>Each account's SSH target maps to its own podman image.</p>
+    </div>
+    <div class="feature">
+      <h3>Server-rendered dashboard</h3>
+      <p>Session rows are rendered fresh on every request, no client state.</p>
+    </div>
+    <div class="feature">
+      <h3>Hashed &amp; tracked</h3>
+      <p>Passwords hashed with bcrypt, sessions tracked server-side in SQLite.</p>
+    </div>
+  </div>
+</section>
+{{ include "_footer.html" }}
