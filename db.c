@@ -310,3 +310,32 @@ db_key_del(const char *fingerprint)
     return 0;
 }
 
+container_t*
+db_container_get_by_user_id(const uint64_t id)
+{
+    const char *sql =
+        "SELECT image FROM containers WHERE user_id = ?";
+
+    sqlite3_stmt *stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        fprintf(stderr, "db_container_get: %s\n", sqlite3_errmsg(db));
+        return NULL;
+    }
+    sqlite3_bind_int64(stmt, 1, id);
+
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        sqlite3_finalize(stmt);
+        return NULL;
+    }
+
+    printf("here\n");
+    container_t *container = calloc(1, sizeof(container_t));
+
+    strncpy(container->image, (const char*)sqlite3_column_text(stmt, 0), 256);
+        container->image[255] = '\0';
+
+    sqlite3_finalize(stmt);
+
+    return container;
+}
+

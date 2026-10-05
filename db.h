@@ -28,7 +28,9 @@
 #ifndef __NELVANA_H
 #define __NELVANA_H
 
+#include <stdbool.h>
 #include <stdint.h>
+#include <time.h>
 
 #define DB_PATH "/usr/local/var/db/nelvana.db"
 
@@ -46,6 +48,17 @@ typedef struct {
     char public_key[8193];
     char fingerprint[65];
 } ssh_key_t;
+
+typedef struct {
+    uint64_t id;
+    uint64_t user_id;
+    char name[256];
+    char container_id[64];
+    char image[256];
+    bool persistent;
+    time_t last_started_at;
+    time_t last_stopped_at;
+} container_t;
 
 uint8_t
 db_init(const char *path);
@@ -70,6 +83,9 @@ db_key_get_by_username(const char *username);
 
 uint8_t
 db_key_del(const char *fingerprint);
+
+container_t*
+db_container_get_by_user_id(const uint64_t id);
 
 #endif /** end __NELVANA_H */
 

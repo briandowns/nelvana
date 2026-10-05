@@ -34,12 +34,14 @@
 #include "db.h"
 
 int
-main(void)
+main(int argc, char **argv)
 {
-    char *user_id = getenv("NELVANA_USER_ID");
-    if (user_id == NULL || user_id[0] == '\0') {
-        return 1;
+    if (argc < 2) {
+	fprintf(stderr, "error: user id required\n");
+   	return 1; 
     }
+
+    const char *user_id = argv[1];
 
     char *endptr;
     errno = 0; 
@@ -61,28 +63,35 @@ main(void)
 
     user_t *user = db_user_get_by_id(val);
     if (user == NULL) {
-	    fprintf(stderr, "error: retrieving user\n");
+        fprintf(stderr, "error: retrieving user\n");
         return 1;
     }
 
+    printf("XXX - user: %s\n", user->username);
+
+    container_t *container = db_container_get_by_user_id(val);
+    if (container == NULL) {
+        fprintf(stderr, "error: retrieving container\n");
+        return 1;
+    }
     db_close();
 
-    // from here, user the info to look up the container
-    printf("XXX - test\n");
+    printf("XXX - launching container: %s\n", container->image);
 
-    char *argv[] = {
+    char *args[] = {
         "/usr/local/bin/sudo",
         "/usr/local/bin/podman",
         "run",
         "--rm",
         "--interactive",
         "--tty",
-        "ghcr.io/freebsd/freebsd-runtime:15.1",
+	container->image,
+        //"ghcr.io/freebsd/freebsd-runtime:15.1",
         "/bin/sh",
         NULL
     };
 
-    execv(argv[0], argv);
+    execv(args[0], args);
 
     printf("%s\n", strerror(errno));
 

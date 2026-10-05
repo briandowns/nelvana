@@ -56,7 +56,7 @@ main(int argc, char **argv)
         return 1;
     }
 
-    printf("environment=\"NELVANA_USER_ID=%" PRIu64 "\" %s\n", key->id, key->public_key);
+    printf("command=\"/usr/local/libexec/nelvana-exec %" PRIu64 "\" %s\n", key->id, key->public_key);
 
     free(key);
     db_close();
