@@ -36,64 +36,40 @@
 int
 main(int argc, char **argv)
 {
-    if (argc < 2) {
-	fprintf(stderr, "error: user id required\n");
-   	return 1; 
-    }
-
-    const char *user_id = argv[1];
-
-    char *endptr;
-    errno = 0; 
-
-    unsigned long long val = strtoull(user_id, &endptr, 10);
-    if (errno == ERANGE) {
-        fprintf(stderr, "error: value out of range for an unsigned long long.\n");
+    if (argc != 2) {
+        fprintf(stderr, "error: user id required\n");
         return 1;
     }
 
-    if (user_id == endptr) {
-        fprintf(stderr, "error: no digits found in the string.\n");
+    char *end = NULL;
+    errno = 0;
+    unsigned long long id = strtoull(argv[1], &end, 10);
+    if (errno != 0 || end == argv[1] || *end != '\0') {
+        fprintf(stderr, "error: invalid user id\n");
         return 1;
     }
 
-    uint64_t result = (uint64_t)val;
-
-    db_init(DB_PATH);
-
-    user_t *user = db_user_get_by_id(val);
-    if (user == NULL) {
-        fprintf(stderr, "error: retrieving user\n");
+    if (db_init(DB_PATH) != 0) {
+        fprintf(stderr, "error: database unavailable\n");
         return 1;
     }
 
-    printf("XXX - user: %s\n", user->username);
-
-    container_t *container = db_container_get_by_user_id(val);
+    container_t *container = db_container_get_by_user_id((uint64_t)id);
+    db_close();
     if (container == NULL) {
         fprintf(stderr, "error: retrieving container\n");
         return 1;
     }
-    db_close();
-
-    printf("XXX - launching container: %s\n", container->image);
 
     char *args[] = {
-        "/usr/local/bin/sudo",
-        "/usr/local/bin/podman",
-        "run",
-        "--rm",
-        "--interactive",
-        "--tty",
-	container->image,
-        //"ghcr.io/freebsd/freebsd-runtime:15.1",
-        "/bin/sh",
-        NULL
+        "/usr/local/bin/sudo", "/usr/local/bin/podman", "run",
+        "--rm", "--interactive", "--tty",
+        //"--name", container->name,
+        container->image, "/bin/sh", NULL
     };
-
+ 
     execv(args[0], args);
-
-    printf("%s\n", strerror(errno));
+    fprintf(stderr, "error: exec: %s\n", strerror(errno));
 
     return 1;
 }

@@ -45,6 +45,7 @@ typedef struct {
 
 typedef struct {
     uint64_t id;
+    uint64_t user_id;
     char public_key[8193];
     char fingerprint[65];
 } ssh_key_t;
@@ -80,6 +81,9 @@ db_key_add(const char *username, const char *path);
 
 ssh_key_t*
 db_key_get_by_username(const char *username);
+
+ssh_key_t*
+db_key_get_by_fingerprint(const char *fingerprint);
 
 uint8_t
 db_key_del(const char *fingerprint);

@@ -289,19 +289,66 @@ db_key_get_by_username(const char *username)
         return NULL;
     }
 
-    ssh_key_t *ssh_key = malloc(sizeof(ssh_key_t));
+    ssh_key_t *key = calloc(1, sizeof(ssh_key_t));
+    if (key == NULL) {
+        //
+    }
 
-    ssh_key->id = (uint64_t)sqlite3_column_int64(stmt, 0);
+    key->id = (uint64_t)sqlite3_column_int64(stmt, 0);
 
-    strncpy(ssh_key->public_key, (const char*)sqlite3_column_text(stmt, 1), 8193);
-    ssh_key->public_key[8192] = '\0';
+    strncpy(key->public_key, (const char*)sqlite3_column_text(stmt, 1), 8193);
+    key->public_key[8192] = '\0';
 
-    strncpy(ssh_key->fingerprint, (const char*)sqlite3_column_text(stmt, 2), 65);
-    ssh_key->fingerprint[64] = '\0';
+    strncpy(key->fingerprint, (const char*)sqlite3_column_text(stmt, 2), 65);
+    key->fingerprint[64] = '\0';
 
     sqlite3_finalize(stmt);
 
-    return ssh_key;
+    return key;
+}
+
+ssh_key_t*
+db_key_get_by_fingerprint(const char *fingerprint)
+{
+    static const char *sql =
+        "SELECT id, user_id, public_key, fingerprint "
+        "FROM ssh_keys WHERE fingerprint = ?1 LIMIT 1;";
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        return NULL;
+    }
+
+    sqlite3_bind_text(stmt, 1, fingerprint, -1, SQLITE_STATIC);
+
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        sqlite3_finalize(stmt);
+        return NULL;
+    }
+
+    ssh_key_t *key = calloc(1, sizeof(ssh_key_t));
+    if (key == NULL) {
+        sqlite3_finalize(stmt);
+        return NULL;
+    }
+
+    const char *pk = (const char *)sqlite3_column_text(stmt, 2);
+    const char *fp = (const char *)sqlite3_column_text(stmt, 3);
+    if (pk == NULL || fp == NULL) {
+        sqlite3_finalize(stmt);
+        free(key);
+        return NULL;
+    }
+
+    key->id = (uint64_t)sqlite3_column_int64(stmt, 0);
+    key->user_id = (uint64_t)sqlite3_column_int64(stmt, 1);
+
+    snprintf(key->public_key, sizeof(key->public_key), "%s", pk);
+    snprintf(key->fingerprint, sizeof(key->fingerprint), "%s", fp);
+
+    sqlite3_finalize(stmt);
+
+    return key;
 }
 
 uint8_t
