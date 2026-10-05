@@ -110,7 +110,9 @@ db_close(void)
     }
 }
 
-/* Copy a text column into a fixed buffer. Always terminated, NULL -> "". */
+/**
+ * Copy a text column into a fixed buffer.
+ */
 static void
 col_copy(char *dst, size_t dstsz, sqlite3_stmt *stmt, int col)
 {
@@ -118,7 +120,9 @@ col_copy(char *dst, size_t dstsz, sqlite3_stmt *stmt, int col)
     snprintf(dst, dstsz, "%s", s != NULL ? s : "");
 }
 
-/* Duplicate a text column into heap memory. NULL -> "". */
+/**
+ * Duplicate a text column into heap memory.
+ */
 static char*
 col_dup(sqlite3_stmt *stmt, int col)
 {
@@ -172,6 +176,7 @@ db_user_free(user_t *user)
     if (user == NULL) {
         return;
     }
+
     free(user->username);
     free(user->email);
     free(user->first_name);
@@ -183,7 +188,8 @@ db_user_free(user_t *user)
 user_t*
 db_user_get_by_id(const uint64_t id)
 {
-    const char *sql = "SELECT id, username FROM users WHERE id = ?";
+    const char *sql = "SELECT id, username, email, first_name, last_name, password "
+        "FROM users WHERE id = ?";
 
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
@@ -198,15 +204,12 @@ db_user_get_by_id(const uint64_t id)
         return NULL;
     }
 
-    user_t *user = malloc(sizeof(user_t));
-
-    user->id = (uint64_t)sqlite3_column_int64(stmt, 0);
-
-    int fb = sqlite3_column_bytes(stmt, 1);
-
-    user->username = malloc(fb+1);
-    memcpy(user->username, sqlite3_column_text(stmt, 1), fb);
-    user->username[fb] = '\0';
+    user_t *user = calloc(1, sizeof(user_t));
+    if (user == NULL) {
+        sqlite3_finalize(stmt);
+        return NULL;
+    }
+    user_from_row(stmt, user); 
 
     sqlite3_finalize(stmt);
 

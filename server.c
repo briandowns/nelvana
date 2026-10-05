@@ -6,7 +6,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <logger.h>
 #include <papago.h>
 
 #include "db.h"
@@ -39,7 +38,7 @@ user_handler(papago_request_t *req, papago_response_t *res, void *user_data)
     const char *id_str = papago_req_param(req, "id");
     if (id_str == NULL) {
         papago_res_set_status(res, PAPAGO_STATUS_BAD_REQUEST);
-        papago_res_json(res, "{\"error\":\"Missing user ID\"}");
+        papago_res_json(res, "{\"error\":\"missing user ID\"}");
         return;
     }
 
@@ -107,9 +106,9 @@ main(void)
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
-    s_log_init(stdout);
+//    s_log_init(stdout);
 
-    s_log(S_LOG_INFO, "msg", "starting nelvana server");
+//   s_log(S_LOG_INFO, "msg", "starting nelvana server");
 
     db_init(DB_PATH);
 
