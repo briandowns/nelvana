@@ -65,6 +65,33 @@ user_handler(papago_request_t *req, papago_response_t *res, void *user_data)
     db_user_free(user);
 }
 
+void
+users_handler(papago_request_t *req, papago_response_t *res, void *user_data)
+{
+    PAPAGO_UNUSED(req);
+    PAPAGO_UNUSED(user_data);
+
+    user_t **users = db_users_all();
+    if (users == NULL) {
+        papago_res_set_status(res, PAPAGO_STATUS_INTERNAL_SERVER);
+        papago_res_json(res, "{\"error\":\"internal server error\"}");
+        return;
+    }
+
+    char payload[512];
+    snprintf(payload, sizeof(payload),
+        "{\"id\":%" PRIu64 ",\"username\":\"%s\",\"email\":\"%s\","
+        "\"first_name\":\"%s\",\"last_name\":\"%s\"}",
+        user->id,
+        user->username,
+        user->email,
+        user->first_name,
+        user->last_name);
+
+    papago_res_json(res, payload);
+
+    db_user_free(user);
+}
 static bool
 logger_before(papago_request_t *req, papago_response_t *res, void *user_data)
 {
@@ -128,7 +155,7 @@ main(void)
     // papago_route(server, PAPAGO_GET, "/", landing_handler, server);
     // papago_route(server, PAPAGO_GET, "/static", papago_serve_static_handler, server);
     papago_route(server, PAPAGO_GET, API_USER "/:id", user_handler, NULL);
-    //papago_route(server, PAPAGO_GET, API_USERS, users_handler, NULL);
+    papago_route(server, PAPAGO_GET, API_USERS, users_handler, NULL);
 
     papago_config_t config = papago_default_config();
     config.static_dir = "./public/static";

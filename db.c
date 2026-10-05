@@ -185,6 +185,19 @@ db_user_free(user_t *user)
     free(user);
 }
 
+user_t**
+db_users_all(void)
+{
+    const char *sql = "SELECT * FROM users";
+    sqlite3_stmt *stmt;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        fprintf(stderr, "user_get: %s\n", sqlite3_errmsg(db));
+        return NULL;
+    }
+
+    return NULL;
+}
+
 user_t*
 db_user_get_by_id(const uint64_t id)
 {
