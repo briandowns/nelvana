@@ -167,8 +167,7 @@ user_from_row(sqlite3_stmt *stmt, user_t *out_user)
 user_t*
 db_user_get_by_id(const uint64_t id)
 {
-    const char *sql =
-        "SELECT id, username FROM users WHERE id = ?";
+    const char *sql = "SELECT id, username FROM users WHERE id = ?";
 
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
@@ -183,7 +182,7 @@ db_user_get_by_id(const uint64_t id)
         return NULL;
     }
 
-    user_t *user = calloc(1, sizeof(user));
+    user_t *user = malloc(sizeof(user_t));
 
     user->id = (uint64_t)sqlite3_column_int64(stmt, 0);
 
@@ -290,7 +289,7 @@ db_key_get_by_username(const char *username)
         return NULL;
     }
 
-    ssh_key_t *ssh_key = calloc(1, sizeof(ssh_key));
+    ssh_key_t *ssh_key = malloc(sizeof(ssh_key_t));
 
     ssh_key->id = (uint64_t)sqlite3_column_int64(stmt, 0);
 

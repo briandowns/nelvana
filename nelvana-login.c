@@ -61,7 +61,7 @@ main(void)
 
     user_t *user = db_user_get_by_id(val);
     if (user == NULL) {
-	fprintf(stderr, "error: retrieving user\n");
+	    fprintf(stderr, "error: retrieving user\n");
         return 1;
     }
 
