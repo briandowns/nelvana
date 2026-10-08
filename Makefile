@@ -27,12 +27,24 @@ PREFIX = /usr/local
 MACOS_MANPAGE_LOC = /usr/share/man
 LINUX_MANPAGE_LOC = /usr/share/man/man1
 
-.PHONY: server
-server: $(BINDIR) clean
-	$(CC) $(CFLAGS) server.c db.c -o $(BINDIR)/$(BINARY) $(LDFLAGS)
+.PHONY: nelvana-keys
+nelvana-keys: $(BINDIR)
+	rm -f  $(BINDIR)/$(BINARY)-keys
+	$(CC) $(CFLAGS) nelvana-keys.c db.c -o $(BINDIR)/$(BINARY)-keys $(LDFLAGS)
 
-.PHONY: ctl
-ctl: $(BINDIR) clean
+.PHONY: nelvana-exec
+nelvana-exec: $(BINDIR)
+	rm -f  $(BINDIR)/$(BINARY)-exec
+	$(CC) $(CFLAGS) nelvana-exec.c db.c -o $(BINDIR)/$(BINARY)-exec $(LDFLAGS)
+
+.PHONY: nelvana-server
+server: $(BINDIR)
+	rm -f  $(BINDIR)/$(BINARY)-server
+	$(CC) $(CFLAGS) server.c db.c -o $(BINDIR)/$(BINARY)-server $(LDFLAGS)
+
+.PHONY: nelvanactl
+ctl: $(BINDIR)
+	rm -f  $(BINDIR)/nelvanactl
 	$(CC) $(CFLAGS) nelvanactl.c -o $(BINDIR)/$(BINARYCTL) $(LDFLAGS)
 	
 $(BINDIR):

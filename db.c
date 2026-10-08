@@ -109,6 +109,22 @@ db_close(void)
     }
 }
 
+/* Copy a text column into a fixed buffer. Always terminated, NULL -> "". */
+static void
+col_copy(char *dst, size_t dstsz, sqlite3_stmt *stmt, int col)
+{
+    const char *s = (const char*)sqlite3_column_text(stmt, col);
+    snprintf(dst, dstsz, "%s", s != NULL ? s : "");
+}
+
+/* Duplicate a text column into heap memory. NULL -> "". */
+static char*
+col_dup(sqlite3_stmt *stmt, int col)
+{
+    const char *s = (const char*)sqlite3_column_text(stmt, col);
+    return strdup(s != NULL ? s : "");
+}
+
 uint8_t
 db_user_add(const user_t *user)
 {
@@ -253,13 +269,21 @@ static void
 key_from_row(sqlite3_stmt *stmt, ssh_key_t *out_key)
 {
     out_key->id = (uint64_t)sqlite3_column_int64(stmt, 0);
-
-    strncpy(out_key->public_key, (const char*)sqlite3_column_text(stmt, 1), 8193);
-    out_key->public_key[8192] = '\0';
-
-    strncpy(out_key->fingerprint, (const char*)sqlite3_column_text(stmt, 2), 65);
-    out_key->fingerprint[64] = '\0';
+    col_copy(out_key->public_key, sizeof(out_key->public_key), stmt, 1);
+    col_copy(out_key->fingerprint, sizeof(out_key->fingerprint), stmt, 2);
 }
+
+// static void
+// key_from_row(sqlite3_stmt *stmt, ssh_key_t *out_key)
+// {
+//     out_key->id = (uint64_t)sqlite3_column_int64(stmt, 0);
+//
+//     strncpy(out_key->public_key, (const char*)sqlite3_column_text(stmt, 1), 8193);
+//     out_key->public_key[8192] = '\0';
+//
+//     strncpy(out_key->fingerprint, (const char*)sqlite3_column_text(stmt, 2), 65);
+//     out_key->fingerprint[64] = '\0';
+// }
 
 uint8_t
 db_key_add(const char *username, const char *path)

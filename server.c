@@ -5,10 +5,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <logger.h>
 #include <papago.h>
 
 #include "db.h"
-#include <logger.h>
 
 #define API_BASE "/api/v1"
 #define API_USER API_BASE "/user"
@@ -90,10 +90,10 @@ main(void)
     };
     papago_middleware_add(server, &structured_logger);
 
-    papago_route(server, PAPAGO_GET, "/", dashboard_handler, server);
+    // papago_route(server, PAPAGO_GET, "/", dashboard_handler, server);
     papago_route(server, PAPAGO_GET, "/static", papago_serve_static_handler, server);
-    papago_route(server, PAPAGO_GET, API_USER "/:id", user_handler, NULL);
-    papago_route(server, PAPAGO_GET, API_USERS, users_handler, NULL);
+    // papago_route(server, PAPAGO_GET, API_USER "/:id", user_handler, NULL);
+    // papago_route(server, PAPAGO_GET, API_USERS, users_handler, NULL);
 
     papago_config_t config = papago_default_config();
     config.static_dir = "./public/static";
