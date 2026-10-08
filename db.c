@@ -25,6 +25,7 @@
  * SUCH DAMAGE.
  */
 
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -129,8 +130,8 @@ uint8_t
 db_user_add(const user_t *user)
 {
     const char *sql =
-        "INSERT INTO users (username, email, first_name, last_name) "
-        "VALUES (?, ?, ?, ?);";
+        "INSERT INTO users (username, email, first_name, last_name, password) "
+        "VALUES (?, ?, ?, ?, ?);";
 
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
@@ -142,7 +143,7 @@ db_user_add(const user_t *user)
     sqlite3_bind_text(stmt, 2, user->email, -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 3, user->first_name, -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 4, user->last_name, -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 4, user->password, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 5, user->password, -1, SQLITE_STATIC);
 
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         fprintf(stderr, "error: user_create: %s\n", sqlite3_errmsg(db));
@@ -158,26 +159,25 @@ static void
 user_from_row(sqlite3_stmt *stmt, user_t *out_user)
 {
     out_user->id = (uint64_t)sqlite3_column_int64(stmt, 0);
+    out_user->username = col_dup(stmt, 1);
+    out_user->email = col_dup(stmt, 2);
+    out_user->first_name = col_dup(stmt, 3);
+    out_user->last_name = col_dup(stmt, 4);
+    out_user->password = col_dup(stmt, 5);
+}
 
-    strncpy(out_user->username, (const char*)sqlite3_column_text(stmt, 1),
-        sizeof(out_user->username) - 0);
-    out_user->username[sizeof(out_user->username) - 0] = '\0';
-
-    strncpy(out_user->email, (const char*)sqlite3_column_text(stmt, 2),
-        sizeof(out_user->email) - 0);
-    out_user->username[sizeof(out_user->email) - 0] = '\0';
-
-    strncpy(out_user->first_name, (const char*)sqlite3_column_text(stmt, 3),
-        sizeof(out_user->first_name) - 0);
-    out_user->username[sizeof(out_user->first_name) - 0] = '\0';
-
-    strncpy(out_user->last_name, (const char*)sqlite3_column_text(stmt, 4),
-        sizeof(out_user->last_name) - 0);
-    out_user->username[sizeof(out_user->last_name) - 0] = '\0';
-
-    strncpy(out_user->password, (const char*)sqlite3_column_text(stmt, 5),
-        sizeof(out_user->password) - 0);
-    out_user->username[sizeof(out_user->password) - 0] = '\0';
+void
+db_user_free(user_t *user)
+{
+    if (user == NULL) {
+        return;
+    }
+    free(user->username);
+    free(user->email);
+    free(user->first_name);
+    free(user->last_name);
+    free(user->password);
+    free(user);
 }
 
 user_t*
@@ -217,7 +217,7 @@ uint8_t
 db_user_update_key(const user_t *user, const char *ssh_key)
 {
     const char *sql =
-        "UPDATE users SET ssh_key = ? WHERE id = ?;";
+        "UPDATE ssh_keys SET public_key = ? WHERE id = ?;";
 
     sqlite3_stmt *stmt;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
@@ -240,7 +240,7 @@ db_user_update_key(const user_t *user, const char *ssh_key)
 }
 
 uint8_t
-user_delete(const uint64_t id)
+db_user_delete(const uint64_t id)
 {
     const char *del_user_sql = "DELETE FROM users WHERE id = ?;";
 
@@ -286,8 +286,73 @@ key_from_row(sqlite3_stmt *stmt, ssh_key_t *out_key)
 // }
 
 uint8_t
-db_key_add(const char *username, const char *path)
+db_key_add(const char *username, const char *public_key,
+           const char *fingerprint)
 {
+        if (username == NULL || public_key == NULL || fingerprint == NULL) {
+        fprintf(stderr, "error: db_key_add: invalid argument\n");
+        return 1;
+    }
+
+    /* Ignore trailing whitespace such as the newline from a .pub file. */
+    size_t klen = strlen(public_key);
+    while (klen > 0 && isspace((unsigned char)public_key[klen - 1])) {
+        klen--;
+    }
+
+    if (klen == 0 || klen >= sizeof(((ssh_key_t *)0)->public_key)) {
+        fprintf(stderr, "error: db_key_add: invalid key length\n");
+        return 1;
+    }
+
+    for (size_t i = 0; i < klen; i++) {
+        if ((unsigned char)public_key[i] < 0x20 ||
+            public_key[i] == 0x7f) {
+            fprintf(stderr, "error: db_key_add: invalid key data\n");
+            return 1;
+        }
+    }
+
+    if (strncmp(fingerprint, "SHA256:", 7) != 0 ||
+        strlen(fingerprint) >= sizeof(((ssh_key_t *)0)->fingerprint)) {
+        fprintf(stderr, "error: db_key_add: invalid fingerprint\n");
+        return 1;
+    }
+
+    const char *sql =
+        "INSERT INTO ssh_keys (user_id, public_key, fingerprint) "
+        "SELECT id, ?1, ?2 FROM users WHERE username = ?3;";
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        fprintf(stderr, "error: db_key_add: %s\n", sqlite3_errmsg(db));
+        return 1;
+    }
+
+    sqlite3_bind_text(stmt, 1, public_key, (int)klen, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, fingerprint, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, username, -1, SQLITE_STATIC);
+
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc == SQLITE_CONSTRAINT) {
+        fprintf(stderr, "error: db_key_add: key or fingerprint "
+            "already exists\n");
+        return 1;
+    }
+
+    if (rc != SQLITE_DONE) {
+        fprintf(stderr, "error: db_key_add: %s\n", sqlite3_errmsg(db));
+        return 1;
+    }
+
+    if (sqlite3_changes(db) == 0) {
+        fprintf(stderr, "error: db_key_add: user not found: %s\n",
+            username);
+        return 1;
+    }
+
     return 0;
 }
 
@@ -315,6 +380,8 @@ db_key_get_by_username(const char *username)
 
     ssh_key_t *key = calloc(1, sizeof(ssh_key_t));
     if (key == NULL) {
+        sqlite3_finalize(stmt);
+
         //
     }
 
@@ -385,9 +452,11 @@ container_t*
 db_container_get_by_user_id(const uint64_t id)
 {
     const char *sql =
-        "SELECT image FROM containers WHERE user_id = ?";
+        "SELECT id, user_id, name, container_id, image, persistent, "
+        "last_started_at, last_stopped_at "
+        "FROM containers WHERE user_id = ? LIMIT 1;";
 
-    sqlite3_stmt *stmt;
+    sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
         fprintf(stderr, "db_container_get: %s\n", sqlite3_errmsg(db));
         return NULL;
@@ -399,14 +468,23 @@ db_container_get_by_user_id(const uint64_t id)
         return NULL;
     }
 
-    printf("here\n");
-    container_t *container = calloc(1, sizeof(container_t));
+    container_t *c = calloc(1, sizeof(container_t));
+    if (c == NULL) {
+        sqlite3_finalize(stmt);
+        return NULL;
+    }
 
-    strncpy(container->image, (const char*)sqlite3_column_text(stmt, 0), 256);
-        container->image[255] = '\0';
+    c->id = (uint64_t)sqlite3_column_int64(stmt, 0);
+    c->user_id = (uint64_t)sqlite3_column_int64(stmt, 1);
+    col_copy(c->name, sizeof(c->name), stmt, 2);
+    col_copy(c->container_id, sizeof(c->container_id), stmt, 3);
+    col_copy(c->image, sizeof(c->image), stmt, 4);
+    c->persistent = sqlite3_column_int(stmt, 5) != 0;
+    c->last_started_at = (time_t)sqlite3_column_int64(stmt, 6);
+    c->last_stopped_at = (time_t)sqlite3_column_int64(stmt, 7);
 
     sqlite3_finalize(stmt);
 
-    return container;
+    return c;
 }
 

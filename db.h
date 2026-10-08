@@ -77,7 +77,14 @@ uint8_t
 db_user_list(void);
 
 uint8_t
-db_key_add(const char *username, const char *path);
+db_user_delete(const uint64_t id);
+
+void
+db_user_free(user_t *user);
+
+uint8_t
+db_key_add(const char *username, const char *public_key,
+           const char *fingerprint);
 
 ssh_key_t*
 db_key_get_by_username(const char *username);
