@@ -273,18 +273,6 @@ key_from_row(sqlite3_stmt *stmt, ssh_key_t *out_key)
     col_copy(out_key->fingerprint, sizeof(out_key->fingerprint), stmt, 2);
 }
 
-// static void
-// key_from_row(sqlite3_stmt *stmt, ssh_key_t *out_key)
-// {
-//     out_key->id = (uint64_t)sqlite3_column_int64(stmt, 0);
-//
-//     strncpy(out_key->public_key, (const char*)sqlite3_column_text(stmt, 1), 8193);
-//     out_key->public_key[8192] = '\0';
-//
-//     strncpy(out_key->fingerprint, (const char*)sqlite3_column_text(stmt, 2), 65);
-//     out_key->fingerprint[64] = '\0';
-// }
-
 uint8_t
 db_key_add(const char *username, const char *public_key,
            const char *fingerprint)
@@ -313,7 +301,11 @@ db_key_add(const char *username, const char *public_key,
         }
     }
 
+#ifdef __FreedBSD__
+    if (strlcmp(fingerprint, "SHA256:", 7) != 0 ||
+#else
     if (strncmp(fingerprint, "SHA256:", 7) != 0 ||
+#endif
         strlen(fingerprint) >= sizeof(((ssh_key_t *)0)->fingerprint)) {
         fprintf(stderr, "error: db_key_add: invalid fingerprint\n");
         return 1;
@@ -381,17 +373,25 @@ db_key_get_by_username(const char *username)
     ssh_key_t *key = calloc(1, sizeof(ssh_key_t));
     if (key == NULL) {
         sqlite3_finalize(stmt);
-
-        //
+        return NULL;
     }
 
     key->id = (uint64_t)sqlite3_column_int64(stmt, 0);
 
+#ifdef __FreeBSD__
+    strlcpy(key->public_key, (const char*)sqlite3_column_text(stmt, 1), 8193);
+#else
     strncpy(key->public_key, (const char*)sqlite3_column_text(stmt, 1), 8193);
+#endif
     key->public_key[8192] = '\0';
 
+#ifdef __FreeBSD__
+    strlcpy(key->fingerprint, (const char*)sqlite3_column_text(stmt, 2), 65);
+#else
     strncpy(key->fingerprint, (const char*)sqlite3_column_text(stmt, 2), 65);
+#endif
     key->fingerprint[64] = '\0';
+
 
     sqlite3_finalize(stmt);
 

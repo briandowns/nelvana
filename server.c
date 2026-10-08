@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 199309L
+#include <inttypes.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -28,6 +29,41 @@ signal_handler(int sig)
     if (server != NULL) {
         papago_stop(server);
     }
+}
+
+void
+user_handler(papago_request_t *req, papago_response_t *res, void *user_data)
+{
+    PAPAGO_UNUSED(user_data);
+
+    const char *id_str = papago_req_param(req, "id");
+    if (id_str == NULL) {
+        papago_res_set_status(res, PAPAGO_STATUS_BAD_REQUEST);
+        papago_res_json(res, "{\"error\":\"Missing user ID\"}");
+        return;
+    }
+
+    uint64_t id = strtoull(id_str, NULL, 10);
+    user_t *user = db_user_get_by_id(id);
+    if (user == NULL) {
+        papago_res_set_status(res, PAPAGO_STATUS_NOT_FOUND);
+        papago_res_json(res, "{\"error\":\"user not found\"}");
+        return;
+    }
+
+    char payload[512];
+    snprintf(payload, sizeof(payload),
+        "{\"id\":%" PRIu64 ",\"username\":\"%s\",\"email\":\"%s\","
+        "\"first_name\":\"%s\",\"last_name\":\"%s\"}",
+        user->id,
+        user->username,
+        user->email,
+        user->first_name,
+        user->last_name);
+
+    papago_res_json(res, payload);
+
+    db_user_free(user);
 }
 
 static bool
@@ -90,10 +126,10 @@ main(void)
     };
     papago_middleware_add(server, &structured_logger);
 
-    // papago_route(server, PAPAGO_GET, "/", dashboard_handler, server);
-    papago_route(server, PAPAGO_GET, "/static", papago_serve_static_handler, server);
-    // papago_route(server, PAPAGO_GET, API_USER "/:id", user_handler, NULL);
-    // papago_route(server, PAPAGO_GET, API_USERS, users_handler, NULL);
+    // papago_route(server, PAPAGO_GET, "/", landing_handler, server);
+    // papago_route(server, PAPAGO_GET, "/static", papago_serve_static_handler, server);
+    papago_route(server, PAPAGO_GET, API_USER "/:id", user_handler, NULL);
+    //papago_route(server, PAPAGO_GET, API_USERS, users_handler, NULL);
 
     papago_config_t config = papago_default_config();
     config.static_dir = "./public/static";

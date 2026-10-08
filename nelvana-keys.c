@@ -47,7 +47,11 @@
 static bool
 valid_fingerprint(const char *fp)
 {
+#ifdef __FreeBSD__
+    if (strlcmp(fp, "SHA256:", 7) != 0 || strlen(fp) > 64) {
+#else
     if (strncmp(fp, "SHA256:", 7) != 0 || strlen(fp) > 64) {
+#endif
         return false;
     }
     for (const char *p = fp + 7; *p != '\0'; p++) {
