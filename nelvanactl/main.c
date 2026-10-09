@@ -113,7 +113,7 @@ api_request(const char *url, http_method method, const char *token, const char *
     chunk.size = 0;
 
     CURL *curl = curl_easy_init();
-    if (!curl) {
+    if (curl == NULL) {
         free(chunk.memory);
         free(response);
         return NULL;

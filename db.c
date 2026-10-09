@@ -131,7 +131,7 @@ col_dup(sqlite3_stmt *stmt, int col)
 }
 
 uint8_t
-db_user_add(const user_t *user)
+db_user_add(user_t *user)
 {
     const char *sql =
         "INSERT INTO users (username, email, first_name, last_name, password) "
@@ -154,6 +154,10 @@ db_user_add(const user_t *user)
         sqlite3_finalize(stmt);
         return 1;
     }
+
+    sqlite3_int64 last_id = sqlite3_last_insert_rowid(db);
+    user->id = (uint64_t)last_id;
+
     sqlite3_finalize(stmt);
 
     return 0;

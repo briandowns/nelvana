@@ -1,3 +1,4 @@
+#include <stdint.h>
 #define _POSIX_C_SOURCE 199309L
 #include <inttypes.h>
 #include <signal.h>
@@ -110,6 +111,54 @@ users_handler(papago_request_t *req, papago_response_t *res, void *user_data)
     free(users);
 }
 
+void
+new_user_handler(papago_request_t *req, papago_response_t *res, void *user_data)
+{
+    PAPAGO_UNUSED(user_data);
+
+    const char *body = papago_req_body(req);
+    if (body == NULL) {
+        papago_res_set_status(res, PAPAGO_STATUS_BAD_REQUEST);
+        papago_res_json(res, "{\"error\":\"missing request body\"}");
+        return;
+    }
+
+    json_error_t error;
+    json_t *json_body = json_loads(body, 0, &error);
+
+    const char *username = NULL;
+    const char *email = NULL;
+    const char *first_name = NULL;
+    const char *last_name = NULL;
+
+    json_unpack(json_body, "{s:s, s:s, s:s, s:s}",
+        "username", &username,
+        "email", &email,
+        "first_name", &first_name,
+        "last_name", &last_name);
+
+    user_t nu = (user_t){
+        .username = (char *)username,
+        .email = (char *)email,
+        .first_name = (char *)first_name,
+        .last_name = (char *)last_name,
+    };
+    uint8_t ret = db_user_add(&nu);
+    if (ret != 0) {
+        papago_res_set_status(res, PAPAGO_STATUS_INTERNAL_ERROR);
+        papago_res_json(res, "{\"error\":\"internal server error\"}");
+        json_decref(json_body);
+        return;
+    }
+
+    json_decref(json_body);
+
+    char payload[128];
+    snprintf(payload, sizeof(payload), "{\"id\":%" PRIu64 "}", nu.id);
+
+    papago_res_json(res, payload);
+}
+
 static bool
 logger_before(papago_request_t *req, papago_response_t *res, void *user_data)
 {
@@ -174,6 +223,7 @@ main(void)
     // papago_route(server, PAPAGO_GET, "/static", papago_serve_static_handler, server);
     papago_route(server, PAPAGO_GET, NELVANA_API_USER "/:id", user_handler, NULL);
     papago_route(server, PAPAGO_GET, NELVANA_API_USERS, users_handler, NULL);
+    papago_route(server, PAPAGO_POST, NELVANA_API_USER, new_user_handler, NULL);
 
     papago_config_t config = papago_default_config();
     config.static_dir = "./public/static";

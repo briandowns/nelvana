@@ -68,7 +68,7 @@ void
 db_close(void);
 
 uint8_t
-db_user_add(const user_t *user);
+db_user_add(user_t *user);
 
 void
 db_users_free(user_t *users, size_t count);
