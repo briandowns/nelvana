@@ -71,7 +71,8 @@ users_handler(papago_request_t *req, papago_response_t *res, void *user_data)
     PAPAGO_UNUSED(req);
     PAPAGO_UNUSED(user_data);
 
-    user_t **users = db_users_all();
+    size_t count = 0;
+    user_t *users = db_users_all(&count);
     if (users == NULL) {
         papago_res_set_status(res, PAPAGO_STATUS_INTERNAL_ERROR);
         papago_res_json(res, "{\"error\":\"internal 1 server error\"}");
@@ -86,26 +87,22 @@ users_handler(papago_request_t *req, papago_response_t *res, void *user_data)
         return;
     }
 
-    for (size_t i = 0; users[i] != NULL; i++) {
-        user_t *user = users[i];
-        printf("User: %" PRIu64 ", %s, %s, %s, %s\n",
-            user->id,
-            user->username,
-            user->email,
-            user->first_name,
-            user->last_name
-        );
+    for (size_t i = 0; i < count; i++) {
+        printf("%" PRIu64 "  %s  %s\n", users[i].id, users[i].username,
+            users[i].email);
+
         json_t *json_user = json_pack(
             "{s: %" PRIu64 ", s: s, s: s, s: s, s: s}",
-            "id", user->id,
-            "username", user->username,
-            "email", user->email,
-            "first_name", user->first_name,
-            "last_name", user->last_name
+            "id", users[i].id,
+            "username", users[i].username,
+            "email", users[i].email,
+            "first_name", users[i].first_name,
+            "last_name", users[i].last_name
         );
         json_array_append_new(json_array_root, json_user);
-        db_user_free(user);
     }
+    db_users_free(users, count);
+
     char *payload = json_dumps(json_array_root, 0);
     json_decref(json_array_root);
 
