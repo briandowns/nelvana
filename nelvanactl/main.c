@@ -150,7 +150,6 @@ api_request(const char *url, http_method method, const char *token, const char *
             break;
         case HTTP_GET:
         default:
-            // GET is curl's default behavior
             break;
     }
 
@@ -187,6 +186,7 @@ static uint8_t
 base_flag_config(rattler_cmd *cmd)
 {
     server = rattler_flag_string(cmd, "server");
+    printf("XXX - %s\n", server);
     if (server == NULL || strlen(server) == 0) {
         server = getenv("NELVANA_SERVER");
         if (server == NULL || strlen(server) == 0) {
@@ -291,6 +291,7 @@ main(int argc, char **argv)
         "List resources.\nAlso callable as: ls");
     list->cmd = list_cmd;
     rattler_add_alias(list, "ls");
+    rattler_set_args(list, 1, 1);
     rattler_flags_string(list, "user-id", 'u', "", "User ID");
     rattler_flags_string(list, "username", 'n', "", "Username");
     rattler_flags_string(list, "format", 'f', "table",

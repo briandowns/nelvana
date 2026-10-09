@@ -80,15 +80,21 @@ users_handler(papago_request_t *req, papago_response_t *res, void *user_data)
 
     json_error_t error;
     json_t *json_array_root = json_array();
-    if (!json_array_root) {
+    if (json_array_root == NULL) {
         papago_res_set_status(res, PAPAGO_STATUS_INTERNAL_ERROR);
         papago_res_json(res, "{\"error\":\"internal server error\"}");
         return;
     }
 
-    // Construct JSON array of users
     for (size_t i = 0; users[i] != NULL; i++) {
         user_t *user = users[i];
+        printf("User: %" PRIu64 ", %s, %s, %s, %s\n",
+            user->id,
+            user->username,
+            user->email,
+            user->first_name,
+            user->last_name
+        );
         json_t *json_user = json_pack(
             "{s: %" PRIu64 ", s: s, s: s, s: s, s: s}",
             "id", user->id,
