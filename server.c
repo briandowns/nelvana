@@ -92,7 +92,7 @@ users_handler(papago_request_t *req, papago_response_t *res, void *user_data)
             users[i].first_name, users[i].last_name, users[i].email);
 
         json_t *json_user = json_pack(
-            "{s: %" PRIu64 ", s:s, s:s, s:s, s:s}",
+            "{s:i, s:s, s:s, s:s, s:s}",
             "id", users[i].id,
             "username", users[i].username,
             "email", users[i].email,
