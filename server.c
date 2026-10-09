@@ -88,11 +88,11 @@ users_handler(papago_request_t *req, papago_response_t *res, void *user_data)
     }
 
     for (size_t i = 0; i < count; i++) {
-        printf("%" PRIu64 "  %s  %s\n", users[i].id, users[i].username,
-            users[i].email);
+        printf("%" PRIu64 "  %s  %s %s  %s\n", users[i].id, users[i].username,
+            users[i].first_name, users[i].last_name, users[i].email);
 
         json_t *json_user = json_pack(
-            "{s: %" PRIu64 ", s: s, s: s, s: s, s: s}",
+            "{s: %" PRIu64 ", s:s, s:s, s:s, s:s}",
             "id", users[i].id,
             "username", users[i].username,
             "email", users[i].email,
