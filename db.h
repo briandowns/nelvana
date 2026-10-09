@@ -70,8 +70,11 @@ db_close(void);
 uint8_t
 db_user_add(const user_t *user);
 
-user_t**
-db_users_all(void);
+void
+db_users_free(user_t *users, size_t count);
+
+user_t*
+db_users_all(size_t *count);
 
 user_t*
 db_user_get_by_id(const uint64_t id);

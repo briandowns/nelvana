@@ -74,7 +74,7 @@ users_handler(papago_request_t *req, papago_response_t *res, void *user_data)
     user_t **users = db_users_all();
     if (users == NULL) {
         papago_res_set_status(res, PAPAGO_STATUS_INTERNAL_ERROR);
-        papago_res_json(res, "{\"error\":\"internal server error\"}");
+        papago_res_json(res, "{\"error\":\"internal 1 server error\"}");
         return;
     }
 

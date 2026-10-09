@@ -185,15 +185,77 @@ db_user_free(user_t *user)
     free(user);
 }
 
-user_t**
-db_users_all(void)
+void
+db_users_free(user_t *users, size_t count)
 {
-    const char *sql = "SELECT * FROM users";
-    sqlite3_stmt *stmt;
-    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
-        fprintf(stderr, "user_get: %s\n", sqlite3_errmsg(db));
+    if (users == NULL) {
+        return;
+    }
+
+    for (size_t i = 0; i < count; i++) {
+        db_user_free(&users[i]);
+    }
+
+    free(users);
+}
+
+user_t*
+db_users_all(size_t *count)
+{
+    if (count == NULL) {
         return NULL;
     }
+    *count = 0;
+
+    const char *sql =
+        "SELECT id, username, email, first_name, last_name, password "
+        "FROM users ORDER BY id;";
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        fprintf(stderr, "error: db_users_all: %s\n", sqlite3_errmsg(db));
+        return NULL;
+    }
+
+    size_t cap = 8;
+    size_t n = 0;
+
+    user_t *users = calloc(cap, sizeof(user_t));
+    if (users == NULL) {
+        sqlite3_finalize(stmt);
+        return NULL;
+    }
+
+    int rc;
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        if (n == cap) {
+            size_t ncap = cap * 2;
+            user_t *tmp = realloc(users, ncap * sizeof(user_t));
+            if (tmp == NULL) {
+                goto CLEANUP;
+            }
+            users = tmp;
+            memset(users + cap, 0, (ncap - cap) * sizeof(user_t));
+            cap = ncap;
+        }
+
+        user_from_row(stmt, &users[n]);
+        n++;
+    }
+
+    if (rc != SQLITE_DONE) {
+        fprintf(stderr, "error: db_users_all: %s\n", sqlite3_errmsg(db));
+        goto CLEANUP;
+    }
+
+    sqlite3_finalize(stmt);
+    *count = n;
+
+    return users;
+
+CLEANUP:
+    sqlite3_finalize(stmt);
+    db_users_free(users, n);
 
     return NULL;
 }

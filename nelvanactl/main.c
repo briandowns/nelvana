@@ -235,7 +235,7 @@ list_cmd(rattler_cmd *cmd, int argc, char **argv)
         const char *user_id = rattler_flag_string(cmd, "user-id");
 
 
-        http_resp *res = api_request("http://192.168.122.81:8080/api/v1/user/", HTTP_GET, token, NULL);
+        http_resp *res = api_request("http://192.168.122.81:8080" NELVANA_API_USERS, HTTP_GET, token, NULL);
         if (res == NULL) {
             fprintf(stderr, "error: failed to retrieve user\n");
             return;
