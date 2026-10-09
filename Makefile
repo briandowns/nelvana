@@ -38,14 +38,9 @@ nelvana-exec: $(BINDIR)
 	$(CC) $(CFLAGS) nelvana-exec.c db.c -o $(BINDIR)/$(BINARY)-exec $(LDFLAGS)
 
 .PHONY: nelvana-server
-server: $(BINDIR)
+nelvana-server: $(BINDIR)
 	rm -f  $(BINDIR)/$(BINARY)-server
 	$(CC) $(CFLAGS) server.c db.c -o $(BINDIR)/$(BINARY)-server $(LDFLAGS)
-
-.PHONY: nelvanactl
-ctl: $(BINDIR)
-	rm -f  $(BINDIR)/nelvanactl
-	$(CC) $(CFLAGS) nelvanactl.c -o $(BINDIR)/$(BINARYCTL) $(LDFLAGS)
 	
 $(BINDIR):
 	mkdir -p $(BINDIR)

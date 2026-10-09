@@ -3,17 +3,16 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
 
+#include <jansson.h>
 #include <papago.h>
 
 #include "db.h"
+#include "nelvana.h"
 
-#define API_BASE "/api/v1"
-#define API_USER API_BASE "/user"
-#define API_USERS API_BASE "/users"
 
 static papago_t *server = NULL;
 
@@ -74,25 +73,40 @@ users_handler(papago_request_t *req, papago_response_t *res, void *user_data)
 
     user_t **users = db_users_all();
     if (users == NULL) {
-        papago_res_set_status(res, PAPAGO_STATUS_INTERNAL_SERVER);
+        papago_res_set_status(res, PAPAGO_STATUS_INTERNAL_ERROR);
         papago_res_json(res, "{\"error\":\"internal server error\"}");
         return;
     }
 
-    char payload[512];
-    snprintf(payload, sizeof(payload),
-        "{\"id\":%" PRIu64 ",\"username\":\"%s\",\"email\":\"%s\","
-        "\"first_name\":\"%s\",\"last_name\":\"%s\"}",
-        user->id,
-        user->username,
-        user->email,
-        user->first_name,
-        user->last_name);
+    json_error_t error;
+    json_t *json_array_root = json_array();
+    if (!json_array_root) {
+        papago_res_set_status(res, PAPAGO_STATUS_INTERNAL_ERROR);
+        papago_res_json(res, "{\"error\":\"internal server error\"}");
+        return;
+    }
+
+    // Construct JSON array of users
+    for (size_t i = 0; users[i] != NULL; i++) {
+        user_t *user = users[i];
+        json_t *json_user = json_pack(
+            "{s: %" PRIu64 ", s: s, s: s, s: s, s: s}",
+            "id", user->id,
+            "username", user->username,
+            "email", user->email,
+            "first_name", user->first_name,
+            "last_name", user->last_name
+        );
+        json_array_append_new(json_array_root, json_user);
+        db_user_free(user);
+    }
+    char *payload = json_dumps(json_array_root, 0);
+    json_decref(json_array_root);
 
     papago_res_json(res, payload);
-
-    db_user_free(user);
+    free(users);
 }
+
 static bool
 logger_before(papago_request_t *req, papago_response_t *res, void *user_data)
 {
@@ -155,8 +169,8 @@ main(void)
 
     // papago_route(server, PAPAGO_GET, "/", landing_handler, server);
     // papago_route(server, PAPAGO_GET, "/static", papago_serve_static_handler, server);
-    papago_route(server, PAPAGO_GET, API_USER "/:id", user_handler, NULL);
-    papago_route(server, PAPAGO_GET, API_USERS, users_handler, NULL);
+    papago_route(server, PAPAGO_GET, NELVANA_API_USER "/:id", user_handler, NULL);
+    papago_route(server, PAPAGO_GET, NELVANA_API_USERS, users_handler, NULL);
 
     papago_config_t config = papago_default_config();
     config.static_dir = "./public/static";

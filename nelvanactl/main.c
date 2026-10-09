@@ -35,6 +35,8 @@
 #include <papago.h>
 #include <rattler.h>
 
+#include "../nelvana.h"
+
 #define STR1(x) #x
 #define STR(x) STR1(x)
 
@@ -160,7 +162,7 @@ api_request(const char *url, http_method method, const char *token, const char *
 
     if (res == CURLE_OK) {
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response->status_code);
-        response->body = chunk.memory; // Transfer buffer ownership to response
+        response->body = chunk.memory;
     } else {
         free(chunk.memory);
         response->body = NULL;
@@ -182,12 +184,10 @@ free_http_response(http_resp *resp)
 }
 
 static uint8_t
-base_config(rattler_cmd *cmd)
+base_flag_config(rattler_cmd *cmd)
 {
     server = rattler_flag_string(cmd, "server");
-    printf("XXX 1- server: %s, %ld\n", server, strlen(server));
     if (server == NULL || strlen(server) == 0) {
-        printf("XXX 2- server: %s\n", server);
         server = getenv("NELVANA_SERVER");
         if (server == NULL || strlen(server) == 0) {
             fprintf(stderr, "error: server not specified\n");
@@ -223,15 +223,30 @@ list_cmd(rattler_cmd *cmd, int argc, char **argv)
         return;
     }
 
-    base_config(cmd);
+    base_flag_config(cmd);
 
     const char *user = rattler_flag_string(cmd, "user");
+    const char *format = rattler_flag_string(cmd, "format");
 
     const char *list_item = argv[0];
 
     if (strcmp(list_item, "user") == 0) {
         const char *username = rattler_flag_string(cmd, "user");
         const char *user_id = rattler_flag_string(cmd, "user-id");
+
+
+        http_resp *res = api_request("http://192.168.122.81:8080/api/v1/user/", HTTP_GET, token, NULL);
+        if (res == NULL) {
+            fprintf(stderr, "error: failed to retrieve user\n");
+            return;
+        }
+
+        if (res) {
+            if (res->body) {
+                printf("Response JSON: %s\n", res->body);
+            }
+            free_http_response(res);
+        }
 
         return;
     } else if (strcmp(list_item, "users") == 0) {
@@ -248,12 +263,11 @@ int
 main(int argc, char **argv)
 {
     rattler_cmd *root = rattler_new_command(
-        "nelvanactl [command]", "Nelvana Client CLI",
-        "individually required flags.");
+        "nelvanactl [command]", "Nelvana Client CLI", "");
     rattler_set_version(root, STR(nelvanactl_version));
     rattler_persistent_bool(root, "verbose", 'v', false, "verbose output");
     rattler_persistent_string(root, "server", 's', "",
-        "Server IP Address");
+        "IP Address and Port (colon seperated)");
     rattler_persistent_string(root, "token", 't', "", "API token");
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -279,8 +293,8 @@ main(int argc, char **argv)
     rattler_add_alias(list, "ls");
     rattler_flags_string(list, "user-id", 'u', "", "User ID");
     rattler_flags_string(list, "username", 'n', "", "Username");
-    rattler_flags_string(list, "format", 'f', "",
-        "Format output (json, yaml, table)");
+    rattler_flags_string(list, "format", 'f', "table",
+        "Format output (json, yaml, table (default))");
 
     rattler_add_command(root, add);
     rattler_add_command(root, del);
