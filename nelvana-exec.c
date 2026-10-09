@@ -33,6 +33,9 @@
 
 #include "db.h"
 
+#define STR1(x) #x
+#define STR(x) STR1(x)
+
 int
 main(int argc, char **argv)
 {

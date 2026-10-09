@@ -41,6 +41,9 @@
 
 #include "db.h"
 
+#define STR1(x) #x
+#define STR(x) STR1(x)
+
 /**
  * Accept only "SHA256:" followed by base64 characters.
  */
