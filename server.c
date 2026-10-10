@@ -1,8 +1,8 @@
-#include <stdint.h>
 #define _POSIX_C_SOURCE 199309L
 #include <inttypes.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -14,6 +14,11 @@
 #include "db.h"
 #include "nelvana.h"
 
+typedef struct {
+    user_t *user;
+    char *public_key;
+    char *fingerprint;
+} new_user_req_t;
 
 static papago_t *server = NULL;
 
@@ -126,12 +131,16 @@ new_user_handler(papago_request_t *req, papago_response_t *res, void *user_data)
     json_error_t error;
     json_t *json_body = json_loads(body, 0, &error);
 
+    const char *public_key = NULL;
+    const char *fingerprint = NULL;
     const char *username = NULL;
     const char *email = NULL;
     const char *first_name = NULL;
     const char *last_name = NULL;
 
-    json_unpack(json_body, "{s:s, s:s, s:s, s:s}",
+    json_unpack(json_body, "{s:s, s:s s:{s:s, s:s, s:s, s:s}}",
+        "public_key", &public_key,
+        "fingerprint", &fingerprint,
         "username", &username,
         "email", &email,
         "first_name", &first_name,
@@ -153,10 +162,10 @@ new_user_handler(papago_request_t *req, papago_response_t *res, void *user_data)
 
     json_decref(json_body);
 
-    char payload[128];
-    snprintf(payload, sizeof(payload), "{\"id\":%" PRIu64 "}", nu.id);
+    json_t *json_response = json_pack("{s:i}", "id", nu.id);
+    papago_res_json(res, json_dumps(json_response, 0));
 
-    papago_res_json(res, payload);
+    json_decref(json_response);
 }
 
 static bool
