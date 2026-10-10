@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -81,7 +82,7 @@ users_handler(papago_request_t *req, papago_response_t *res, void *user_data)
     user_t *users = db_users_all(&count);
     if (users == NULL) {
         papago_res_set_status(res, PAPAGO_STATUS_INTERNAL_ERROR);
-        papago_res_json(res, "{\"error\":\"internal 1 server error\"}");
+        papago_res_json(res, "{\"error\":\"internal server error\"}");
         return;
     }
 
@@ -169,6 +170,30 @@ new_user_handler(papago_request_t *req, papago_response_t *res, void *user_data)
 }
 
 static bool
+token_auth_before(papago_request_t *req, papago_response_t *res, void *user_data)
+{
+    PAPAGO_UNUSED(user_data);
+
+    const char *token = papago_req_header(req, "X-Auth-Token");
+
+    if (token == NULL || strcmp(token, "asdf1234") != 0) {
+        papago_res_set_status(res, PAPAGO_STATUS_UNAUTHORIZED);
+        papago_res_json(res, "{\"error\":\"unauthorized\"}");
+        return false;
+    }
+
+    return true;
+}
+
+static void
+token_auth_after(papago_request_t *req, papago_response_t *res, void *user_data)
+{
+    PAPAGO_UNUSED(req);
+    PAPAGO_UNUSED(res);
+    PAPAGO_UNUSED(user_data);
+}
+
+static bool
 logger_before(papago_request_t *req, papago_response_t *res, void *user_data)
 {
     PAPAGO_UNUSED(req);
@@ -185,7 +210,7 @@ logger_after(papago_request_t *req, papago_response_t *res, void *user_data)
 
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
-    double duration_ms = (now.tv_sec  - papago_req_start_time(req).tv_sec) 
+    double duration_ms = (now.tv_sec - papago_req_start_time(req).tv_sec) 
         * 1000.0
         + (now.tv_nsec - papago_req_start_time(req).tv_nsec) / 1.0e6;
 
@@ -209,7 +234,7 @@ main(void)
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
-//    s_log_init(stdout);
+//   s_log_init(stdout);
 
 //   s_log(S_LOG_INFO, "msg", "starting nelvana server");
 
@@ -220,6 +245,13 @@ main(void)
         fprintf(stderr, "failed to create server\n");
         return 1;
     }
+
+    papago_middleware_t token_auth = {
+        .before = token_auth_before,
+        .after = token_auth_after,
+        .user_data = NULL,
+    };
+    //papago_middleware_path_add(server, NELVANA_API_BASE, &token_auth);
 
     papago_middleware_t structured_logger = {
         .before    = logger_before,
@@ -245,7 +277,6 @@ main(void)
         return 1;
     }
 
-    // cleanup
     papago_destroy(server);
 
     return 0;

@@ -80,18 +80,6 @@ write_callback(void *contents, size_t size, size_t nmemb, void *user_data)
     return realsize;
 }
 
-static void
-user_add_cmd(rattler_cmd *cmd, int argc, char **argv)
-{
-    RATTLER_UNUSED(cmd);
-    RATTLER_UNUSED(argc);
-    RATTLER_UNUSED(argv);
-
-    for (int i = 0; i < argc; i++) {
-        printf("  - %s\n", argv[i]);
-    }
-}
-
 http_resp*
 api_request(const char *url, http_method method, const char *token, const char *payload)
 {
@@ -186,7 +174,6 @@ static uint8_t
 base_flag_config(rattler_cmd *cmd)
 {
     server = rattler_flag_string(cmd, "server");
-    printf("XXX - %s\n", server);
     if (server == NULL || strlen(server) == 0) {
         server = getenv("NELVANA_SERVER");
         if (server == NULL || strlen(server) == 0) {
@@ -196,34 +183,90 @@ base_flag_config(rattler_cmd *cmd)
         printf("server: %s\n", server);
     }
     token = rattler_flag_string(cmd, "token");
-    printf("%s - %s\n", server, token);
+
     return 0;
+}
+
+static void
+user_add_cmd(rattler_cmd *cmd, int argc, char **argv)
+{
+    if (base_flag_config(cmd) != 0) {
+        return;
+    }
+
+    const char *add_item = argv[0];
+
+    const char *key_path = rattler_flag_string(cmd, "key-path");
+    if (strlen(key_path) == 0) {
+        fprintf(stderr, "error: key path not specified\n");
+        return;
+    }
+
+    const char *fingerprint = rattler_flag_string(cmd, "fingerprint");
+    if (strlen(fingerprint) == 0) {
+        fprintf(stderr, "error: fingerprint not specified\n");
+        return;
+    }
+
+    if (strcmp(add_item, "user") == 0) {
+        http_resp *res = api_request("http://192.168.122.81:8080" NELVANA_API_USER, HTTP_POST, token, NULL);
+        if (res == NULL) {
+            fprintf(stderr, "error: failed to retrieve user\n");
+            return;
+        }
+
+        if (res != NULL) {
+            if (res->body) {
+                printf("Response JSON: %s\n", res->body);
+            }
+            free_http_response(res);
+        }
+
+        return;
+
+    } else if (strcmp(add_item, "key") == 0) {
+
+    } else {
+        fprintf(stderr, "error: unknown resource\n");
+        return;
+    }
 }
 
 static void
 user_del_cmd(rattler_cmd *cmd, int argc, char **argv)
 {
-    RATTLER_UNUSED(cmd);
-    RATTLER_UNUSED(argc);
-    RATTLER_UNUSED(argv);
+    if (argc < 1) {
+        fprintf(stderr, "error: missing subcommand\n");
+        return;
+    }
 
-    for (int i = 0; i < argc; i++) {
-        printf("  - %s\n", argv[i]);
+    if (base_flag_config(cmd) != 0) {
+        return;
+    }
+
+    const char *del_item = argv[0];
+
+    if (strcmp(del_item, "user") == 0) {
+
+    } else if (strcmp(del_item, "key") == 0) {
+
+    } else {
+        fprintf(stderr, "error: unknown resource\n");
+        return;
     }
 }
 
 static void
 list_cmd(rattler_cmd *cmd, int argc, char **argv)
 {
-    RATTLER_UNUSED(argc);
-    RATTLER_UNUSED(argv);
-
     if (argc < 1) {
         fprintf(stderr, "error: missing subcommand\n");
         return;
     }
 
-    base_flag_config(cmd);
+    if (base_flag_config(cmd) != 0) {
+        return;
+    }
 
     const char *user = rattler_flag_string(cmd, "user");
     const char *format = rattler_flag_string(cmd, "format");
@@ -233,7 +276,6 @@ list_cmd(rattler_cmd *cmd, int argc, char **argv)
     if (strcmp(list_item, "user") == 0) {
         const char *username = rattler_flag_string(cmd, "user");
         const char *user_id = rattler_flag_string(cmd, "user-id");
-
 
         http_resp *res = api_request("http://192.168.122.81:8080" NELVANA_API_USERS, HTTP_GET, token, NULL);
         if (res == NULL) {
@@ -276,6 +318,14 @@ main(int argc, char **argv)
         "add [flags] [user]", "Add a resource",
         "Add a resource.");
     add->cmd = user_add_cmd;
+    rattler_flags_string(add, "username", 'u', "", "Username");
+    rattler_flags_string(add, "email", 'e', "", "Email");
+    rattler_flags_string(add, "first-name", 'f', "", "First Name");
+    rattler_flags_string(add, "last-name", 'l', "", "Last Name");
+    rattler_flags_string(add, "fingerprint", 'F', "", "Key Fingerprint");
+    rattler_flags_string(add, "key-path", 'k', "", "Key Path");
+    rattler_mark_flags_required_together(add, "username", "first-name",
+        "last-name", "fingerprint", "key-path", NULL);
 
     rattler_cmd *del = rattler_new_command(
         "delete [flags] [key]", "Delete a resource",
@@ -302,7 +352,7 @@ main(int argc, char **argv)
     rattler_add_command(root, list);
 
     if (rattler_execute(root, argc, argv) != 0) {
-        fprintf(stderr, "error: failed\n");
+        fprintf(stderr, "error: exec failed\n");
         goto CLEANUP;
         return 1;
     }
